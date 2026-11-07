@@ -1,0 +1,42 @@
+_ > nanoagent.plugin.v0001.ManifestConfig:
+id: campus-drone-planner
+name: Campus Drone Planner
+version: 0.1.0
+status: ready
+spec: nanoagent.plugin/v0001
+
+runtime > nanoagent.plugin.v0001.RuntimeConfig:
+  type: mcp_stdio
+  command: [uv, run, --frozen, python, -m, plugin]
+
+permissions > nanoagent.plugin.v0001.PermissionsConfig:
+  network > nanoagent.plugin.v0001.NetworkConfig:
+    hosts: []
+  filesystem > nanoagent.plugin.v0001.FilesystemConfig:
+    write: [workspace]
+
+# One entry per contract.Tool; its input and output classes are contract.TOOLS's.
+tools > dict[contract.Tool, nanoagent.plugin.v0001.ToolConfig]:
+  open_campus:
+    description: Build a campus from a seed, writing campus.json and notams.txt to the workspace, and list the depot, charging pads, drop-offs and the drone's limits
+  read_notams:
+    description: Read notams.txt, the notice of the temporary no-fly zone and the hours it is active
+  leg_info:
+    description: The shortest path between two points around the buildings, and its length, optionally also avoiding the temporary no-fly zone
+  build_route:
+    description: Write route.geojson and plan.json for stops in order, choosing for each leg whether it avoids the temporary zone, with timestamps at the fixed speed
+  reference_plan:
+    description: The reference, the shortest route that keeps every rule, never offered to the agent
+
+# One entry per contract.Task; its input and output classes are contract.TASKS's.
+tasks > dict[contract.Task, nanoagent.plugin.v0001.TaskConfig]:
+  plan-drone-delivery:
+    description: Plan a delivery drone's route across a campus, around no-fly zones, within its battery, in time
+    runner: agent
+    tools: [open_campus, read_notams, leg_info, build_route]
+    reference: reference_plan
+    instructions: |-
+      Plan a delivery drone's route across a campus. Call open_campus with the seed first: it lists the depot, three charging pads (pad1 to pad3) and four drop-offs (D1 to D4), and the limits. The drone leaves the depot at the start time, flies at a fixed speed, must visit all four drop-offs and land at the depot. One drop-off has a time window: it must arrive within it. Each drop-off takes the drop-off dwell time and each charging stop the charge dwell time, and there is no waiting beyond that.
+      The battery lasts battery_m meters per charge (a stretch of exactly that length is allowed), starts full at the depot, and is refilled by stopping at a pad (or at the depot, passed mid-route). Buildings are permanent no-fly polygons and every route must stay beyond the safety buffer of them; touching the buffer is a violation. notams.txt announces a temporary no-fly zone that applies only between the hours it names (read it with read_notams). A leg that avoids the zone is longer; a leg may cross the zone's area only when the drone is there outside those hours, which depends on when it leaves and how far it has flown.
+      The total length must be at most 1.10 times that of the shortest route that keeps every rule, so choose the order of the drop-offs, where to charge and which legs avoid the zone with care. leg_info gives the length of any leg with and without avoiding the zone. Coordinates are [longitude, latitude].
+      Write the route with build_route (stops start and end at depot; one avoid_notam flag per leg), check its stretches and times, and submit the route and plan paths, the total length and the finish time exactly as build_route returned them.

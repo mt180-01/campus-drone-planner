@@ -1,0 +1,11 @@
+_ > nanoagent.plugin.v0001.ProductConfig:
+tagline: "Plan a delivery drone's route around buildings, a pop-up no-fly zone and a 2 km battery"
+summary: "A geometric path-planning drill. A delivery drone must visit four drop-offs on a campus, one with a time window, recharge at pads because its battery lasts 2 km, stay clear of every building by a 5 m buffer, and keep out of a temporary no-fly zone that is only active between 15:00 and 15:20. The verifier re-computes every distance itself and checks the route against the exact optimum."
+highlights:
+  - "Seven rules checked by plain geometry: buffers, battery stretches, coverage, the time-dependent zone, time windows, a 1.10x length bound, and swapped latitude and longitude"
+  - "The boundaries are exact: a stretch of exactly 2000 m passes, and touching the 5 m buffer fails"
+  - "The reference optimum comes from a visibility graph and an exhaustive search of the small routing problem"
+steps:
+  - "Pick a seed to open a reproducible campus"
+  - "The agent reads the NOTAM, compares legs and chooses the order, the pads and which legs avoid the zone"
+  - "It writes route.geojson and plan.json, and the verifier judges them"
