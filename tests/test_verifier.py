@@ -41,6 +41,14 @@ def test_a_stretch_of_exactly_2000_m_is_allowed_and_2000_02_is_not(tmp_path: Pat
     assert failing(verdict) == ["battery"] and "battery runs out" in verdict["message"]
 
 
+def test_float_slack_on_the_battery_is_a_micrometer_not_a_meter(tmp_path: Path) -> None:
+    # 2000.0000005 m is exactly 2000 m up to float error and must pass; 2000.00004 m is over.
+    inside = reference({"D1": (250, 0), "D2": (500, 0), "D3": (750, 0), "D4": (1000.00000025, 0)}, start=EARLY, optimal=2000.0)
+    assert run(tmp_path, inside)["valid"] is True
+    over = reference({"D1": (250, 0), "D2": (500, 0), "D3": (750, 0), "D4": (1000.00002, 0)}, start=EARLY, optimal=2000.0)
+    assert failing(run(tmp_path, over)) == ["battery"]
+
+
 def test_a_pad_resets_the_battery(tmp_path: Path) -> None:
     ref = reference({"D1": (250, 0), "D2": (500, 0), "D3": (750, 0), "D4": (1000, 0)}, start=EARLY, optimal=2560.0)
     long_way = ["depot", "D1", "D2", "D3", "D4", "pad1", "depot"]  # 1000 + 781, then 781 m home
